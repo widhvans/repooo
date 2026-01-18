@@ -390,4 +390,51 @@ class YouTubeService @Inject constructor() {
             videoCount = streamCount.toInt()
         )
     }
+    
+    /**
+     * Get subscription feed for logged in user
+     * Uses YouTube's feed kiosk when available
+     */
+    suspend fun getSubscriptionFeed(): Result<List<VideoInfo>> = withContext(Dispatchers.IO) {
+        try {
+            android.util.Log.d("YouTubeService", "Loading subscription feed...")
+            
+            // Try to get the subscriptions kiosk
+            try {
+                val kioskList = service.kioskList
+                val kioskId = if (kioskList.availableKiosks.contains("Subscriptions")) {
+                    "Subscriptions"
+                } else {
+                    kioskList.defaultKioskId
+                }
+                
+                val kiosk = kioskList.getExtractorById(kioskId, null)
+                kiosk.fetchPage()
+                
+                val videos = kiosk.initialPage.items
+                    .filterIsInstance<StreamInfoItem>()
+                    .map { it.toVideoInfo() }
+                
+                if (videos.isNotEmpty()) {
+                    android.util.Log.d("YouTubeService", "Subscription feed loaded: ${videos.size} videos")
+                    return@withContext Result.success(videos)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("YouTubeService", "Subscriptions kiosk failed: ${e.message}")
+            }
+            
+            // Fallback: Get YouTube recommendations using search for popular content
+            val searchResults = SearchInfo.getInfo(service, service.searchQHFactory.fromQuery("recommended for you"))
+            val videos = searchResults.getRelatedItems()
+                .filterIsInstance<StreamInfoItem>()
+                .take(25)
+                .map { it.toVideoInfo() }
+            
+            android.util.Log.d("YouTubeService", "Fallback feed loaded: ${videos.size} videos")
+            Result.success(videos)
+        } catch (e: Exception) {
+            android.util.Log.e("YouTubeService", "getSubscriptionFeed error: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
 }
