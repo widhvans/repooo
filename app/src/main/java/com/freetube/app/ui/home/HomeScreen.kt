@@ -1,6 +1,8 @@
 package com.freetube.app.ui.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -26,13 +28,14 @@ import com.freetube.app.ui.components.VideoCard
 import com.freetube.app.ui.components.VideoCardPlaceholder
 import com.freetube.app.ui.theme.YouTubeRed
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     onVideoClick: (String) -> Unit,
     onSearchClick: () -> Unit,
     onChannelClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
+    onDebugClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -41,7 +44,8 @@ fun HomeScreen(
         topBar = {
             HomeTopBar(
                 onSearchClick = onSearchClick,
-                onSettingsClick = onSettingsClick
+                onSettingsClick = onSettingsClick,
+                onDebugClick = onDebugClick
             )
         }
     ) { paddingValues ->
@@ -102,11 +106,12 @@ fun HomeScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun HomeTopBar(
     onSearchClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onDebugClick: () -> Unit
 ) {
     TopAppBar(
         title = {
@@ -154,10 +159,16 @@ private fun HomeTopBar(
                     contentDescription = "Search"
                 )
             }
-            IconButton(onClick = onSettingsClick) {
+            IconButton(
+                onClick = onSettingsClick,
+                modifier = Modifier.combinedClickable(
+                    onClick = onSettingsClick,
+                    onLongClick = onDebugClick
+                )
+            ) {
                 Icon(
                     imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings"
+                    contentDescription = "Settings (long press for logs)"
                 )
             }
         },

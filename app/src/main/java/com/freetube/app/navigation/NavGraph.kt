@@ -16,6 +16,7 @@ import com.freetube.app.ui.library.HistoryScreen
 import com.freetube.app.ui.library.WatchLaterScreen
 import com.freetube.app.ui.player.PlayerScreen
 import com.freetube.app.ui.search.SearchScreen
+import com.freetube.app.ui.settings.DebugLogsScreen
 import com.freetube.app.ui.settings.SettingsScreen
 import com.freetube.app.ui.shorts.ShortsScreen
 import com.freetube.app.ui.subscriptions.SubscriptionsScreen
@@ -61,6 +62,9 @@ fun NavGraph(
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onDebugClick = {
+                    navController.navigate(Screen.DebugLogs.route)
                 }
             )
         }
@@ -202,6 +206,15 @@ fun NavGraph(
                 onVideoClick = { videoId ->
                     navController.navigate(Screen.Player.createRoute(videoId))
                 },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        
+        // Debug Logs
+        composable(Screen.DebugLogs.route) {
+            DebugLogsScreen(
                 onBackClick = {
                     navController.popBackStack()
                 }

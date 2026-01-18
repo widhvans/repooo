@@ -90,6 +90,11 @@ sealed class Screen(
         title = "Watch Later"
     )
     
+    data object DebugLogs : Screen(
+        route = "debug_logs",
+        title = "Debug Logs"
+    )
+    
     data object Login : Screen(
         route = "login",
         title = "Login"

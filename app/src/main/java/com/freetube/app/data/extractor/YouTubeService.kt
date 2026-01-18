@@ -25,19 +25,37 @@ class YouTubeService @Inject constructor() {
     private val service = ServiceList.YouTube
     
     /**
-     * Get trending/popular videos
+     * Get trending/popular videos - uses search for "trending" as kiosk can fail
      */
     suspend fun getTrendingVideos(): Result<List<VideoInfo>> = withContext(Dispatchers.IO) {
         try {
-            val kiosk = service.kioskList.getDefaultKioskExtractor(null)
-            kiosk.fetchPage()
+            // Try kiosk first
+            try {
+                val kiosk = service.kioskList.getDefaultKioskExtractor(null)
+                kiosk.fetchPage()
+                
+                val videos = kiosk.initialPage.items
+                    .filterIsInstance<StreamInfoItem>()
+                    .map { it.toVideoInfo() }
+                
+                if (videos.isNotEmpty()) {
+                    return@withContext Result.success(videos)
+                }
+            } catch (e: Exception) {
+                // Kiosk failed, will try search fallback
+                android.util.Log.e("YouTubeService", "Kiosk failed: ${e.message}")
+            }
             
-            val videos = kiosk.initialPage.items
+            // Fallback: Search for popular/trending videos
+            val searchInfo = SearchInfo.getInfo(service, service.searchQHFactory.fromQuery(""))
+            val videos = searchInfo.getRelatedItems()
                 .filterIsInstance<StreamInfoItem>()
+                .take(20)
                 .map { it.toVideoInfo() }
             
             Result.success(videos)
         } catch (e: Exception) {
+            android.util.Log.e("YouTubeService", "getTrendingVideos error: ${e.message}", e)
             Result.failure(e)
         }
     }

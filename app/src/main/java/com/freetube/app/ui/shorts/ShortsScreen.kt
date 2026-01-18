@@ -116,25 +116,52 @@ private fun ShortItem(
     var isPlaying by remember { mutableStateOf(isActive) }
     var isLiked by remember { mutableStateOf(false) }
     var isDisliked by remember { mutableStateOf(false) }
+    var streamUrl by remember { mutableStateOf<String?>(null) }
+    var isLoadingStream by remember { mutableStateOf(false) }
     
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
             repeatMode = Player.REPEAT_MODE_ONE
-            playWhenReady = isActive
+            volume = 1f
         }
     }
     
-    // Load and play when active
+    // Load stream URL when active
     LaunchedEffect(isActive, video.id) {
-        if (isActive) {
-            val videoUrl = ExtractorHelper.buildVideoUrl(video.id)
-            // For shorts, we'd need to get the stream URL
-            // For now, just using the video URL as placeholder
-            val mediaItem = MediaItem.fromUri(videoUrl)
+        if (isActive && streamUrl == null && !isLoadingStream) {
+            isLoadingStream = true
+            try {
+                val videoUrl = ExtractorHelper.buildVideoUrl(video.id)
+                // Fetch stream data from NewPipe
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val streamInfo = org.schabi.newpipe.extractor.stream.StreamInfo.getInfo(
+                        org.schabi.newpipe.extractor.ServiceList.YouTube,
+                        videoUrl
+                    )
+                    
+                    // Get best video stream
+                    val bestStream = streamInfo.videoStreams
+                        .filter { it.isVideoOnly == false }
+                        .maxByOrNull { it.resolution?.replace("p", "")?.toIntOrNull() ?: 0 }
+                        ?: streamInfo.videoStreams.firstOrNull()
+                    
+                    streamUrl = bestStream?.content
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("ShortsScreen", "Failed to load stream: ${e.message}", e)
+            }
+            isLoadingStream = false
+        }
+    }
+    
+    // Play video when stream URL is available
+    LaunchedEffect(streamUrl, isActive) {
+        if (isActive && streamUrl != null) {
+            val mediaItem = MediaItem.fromUri(streamUrl!!)
             exoPlayer.setMediaItem(mediaItem)
             exoPlayer.prepare()
-            exoPlayer.play()
-        } else {
+            exoPlayer.playWhenReady = true
+        } else if (!isActive) {
             exoPlayer.pause()
         }
     }
