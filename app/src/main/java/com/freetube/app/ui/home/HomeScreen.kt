@@ -159,16 +159,20 @@ private fun HomeTopBar(
                     contentDescription = "Search"
                 )
             }
-            IconButton(
-                onClick = onSettingsClick,
-                modifier = Modifier.combinedClickable(
-                    onClick = onSettingsClick,
-                    onLongClick = onDebugClick
-                )
+            // Settings button with long-press for debug logs
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .combinedClickable(
+                        onClick = onSettingsClick,
+                        onLongClick = onDebugClick
+                    ),
+                contentAlignment = androidx.compose.ui.Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings (long press for logs)"
+                    contentDescription = "Settings (long press for logs)",
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
         },

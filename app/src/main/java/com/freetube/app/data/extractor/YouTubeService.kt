@@ -116,9 +116,15 @@ class YouTubeService @Inject constructor() {
      */
     suspend fun getStreamData(videoUrl: String): Result<StreamData> = withContext(Dispatchers.IO) {
         try {
+            android.util.Log.d("YouTubeService", "Getting streams for: $videoUrl")
+            
             val streamInfo = StreamInfo.getInfo(service, videoUrl)
             
+            android.util.Log.d("YouTubeService", "Got ${streamInfo.videoStreams.size} video streams, ${streamInfo.audioStreams.size} audio streams")
+            android.util.Log.d("YouTubeService", "HLS URL: ${streamInfo.hlsUrl}")
+            
             val videoStreams = streamInfo.videoStreams.map { stream ->
+                android.util.Log.d("YouTubeService", "Video stream: ${stream.resolution} - ${stream.format?.name}")
                 VideoStream(
                     url = stream.content,
                     format = stream.format?.name ?: "Unknown",
@@ -157,8 +163,10 @@ class YouTubeService @Inject constructor() {
                 hlsUrl = streamInfo.hlsUrl
             )
             
+            android.util.Log.d("YouTubeService", "Stream data ready: ${videoStreams.size} video, ${audioStreams.size} audio")
             Result.success(streamData)
         } catch (e: Exception) {
+            android.util.Log.e("YouTubeService", "getStreamData failed: ${e.message}", e)
             Result.failure(e)
         }
     }

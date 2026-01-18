@@ -17,11 +17,12 @@ import java.util.concurrent.TimeUnit
 class NetworkDownloader private constructor() : Downloader() {
     
     private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
         .followRedirects(true)
         .followSslRedirects(true)
+        .retryOnConnectionFailure(true)
         .build()
     
     companion object {
@@ -35,8 +36,11 @@ class NetworkDownloader private constructor() : Downloader() {
             return instance!!
         }
         
-        // User agent to mimic a real browser
-        private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        // User agent mimicking Android YouTube app
+        private const val USER_AGENT = "com.google.android.youtube/19.02.39 (Linux; U; Android 14; en_US; sdk_gphone64_arm64 Build/UE1A.230829.036.A1) gzip"
+        
+        // Additional headers for YouTube
+        private const val YOUTUBE_CLIENT_VERSION = "19.02.39"
     }
     
     override fun execute(request: ExtractorRequest): Response {
@@ -48,8 +52,13 @@ class NetworkDownloader private constructor() : Downloader() {
         val requestBuilder = Request.Builder()
             .url(url)
             .header("User-Agent", USER_AGENT)
+            .header("Accept", "*/*")
+            .header("Accept-Language", "en-US,en;q=0.9")
+            .header("Accept-Encoding", "gzip, deflate")
+            .header("X-YouTube-Client-Name", "3")
+            .header("X-YouTube-Client-Version", YOUTUBE_CLIENT_VERSION)
         
-        // Add custom headers
+        // Add custom headers from the request
         headers.forEach { (key, values) ->
             values.forEach { value ->
                 requestBuilder.addHeader(key, value)
@@ -75,7 +84,10 @@ class NetworkDownloader private constructor() : Downloader() {
         try {
             val response = client.newCall(requestBuilder.build()).execute()
             
-            // Check for reCAPTCHA
+            // Log for debugging
+            android.util.Log.d("NetworkDownloader", "Request: $url -> ${response.code}")
+            
+            // Check for reCAPTCHA or rate limiting
             if (response.code == 429) {
                 response.close()
                 throw ReCaptchaException("reCAPTCHA challenge detected", url)
@@ -98,6 +110,7 @@ class NetworkDownloader private constructor() : Downloader() {
                 url
             )
         } catch (e: IOException) {
+            android.util.Log.e("NetworkDownloader", "Request failed: ${e.message}", e)
             throw e
         }
     }
