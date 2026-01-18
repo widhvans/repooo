@@ -360,7 +360,16 @@ private fun PlayerControlsOverlay(
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(24.dp) // Thinner seekbar
+                        .height(12.dp), // Very thin seekbar like YouTube
+                    thumb = {
+                        // Small circular thumb
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(CircleShape)
+                                .background(Color.Red)
+                        )
+                    }
                 )
             }
             

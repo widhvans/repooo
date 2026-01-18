@@ -19,6 +19,10 @@ data class CommentInfo(
 ) {
     val formattedLikeCount: String
         get() = VideoInfo.formatCount(likeCount)
+    
+    // Clean text by stripping HTML tags
+    val cleanText: String
+        get() = VideoInfo.stripHtml(text)
 }
 
 /**

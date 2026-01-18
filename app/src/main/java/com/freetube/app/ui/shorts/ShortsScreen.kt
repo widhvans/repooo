@@ -204,13 +204,13 @@ private fun ShortItem(
                 )
         )
         
-        // Right side action buttons
+        // Right side action buttons - positioned lower like YouTube
         Column(
             modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 12.dp),
+                .align(Alignment.BottomEnd)
+                .padding(end = 12.dp, bottom = 180.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Like
             ActionButton(

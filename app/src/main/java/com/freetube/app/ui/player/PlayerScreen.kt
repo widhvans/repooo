@@ -334,13 +334,13 @@ private fun VideoInfoSection(
                 modifier = Modifier.padding(12.dp)
             ) {
                 Text(
-                    text = video.description,
+                    text = video.cleanDescription,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = if (isDescriptionExpanded) Int.MAX_VALUE else 3,
                     overflow = TextOverflow.Ellipsis
                 )
                 
-                if (video.description.length > 150) {
+                if (video.cleanDescription.length > 150) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = if (isDescriptionExpanded) "Show less" else "Show more",
@@ -462,7 +462,7 @@ private fun CommentItem(
             Spacer(modifier = Modifier.height(4.dp))
             
             Text(
-                text = comment.text,
+                text = comment.cleanText,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 4,
                 overflow = TextOverflow.Ellipsis

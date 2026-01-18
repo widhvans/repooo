@@ -42,6 +42,19 @@ data class VideoInfo(
     val formattedLikeCount: String
         get() = formatCount(likeCount)
     
+    // Clean description by stripping HTML tags
+    val cleanDescription: String
+        get() = description
+            .replace(Regex("<[^>]*>"), "") // Remove HTML tags
+            .replace("&nbsp;", " ")
+            .replace("&amp;", "&")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&quot;", "\"")
+            .replace("&#39;", "'")
+            .replace(Regex("\\s+"), " ") // Normalize whitespace
+            .trim()
+    
     companion object {
         fun formatCount(count: Long): String {
             return when {
@@ -50,6 +63,20 @@ data class VideoInfo(
                 count >= 1_000 -> String.format("%.1fK", count / 1_000.0)
                 else -> count.toString()
             }
+        }
+        
+        // Utility to strip HTML from any text
+        fun stripHtml(text: String): String {
+            return text
+                .replace(Regex("<[^>]*>"), "")
+                .replace("&nbsp;", " ")
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'")
+                .replace(Regex("\\s+"), " ")
+                .trim()
         }
     }
 }
