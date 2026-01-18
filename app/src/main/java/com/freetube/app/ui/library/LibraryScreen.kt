@@ -78,31 +78,58 @@ fun LibraryScreen(
                             imageVector = Icons.Outlined.AccountCircle,
                             contentDescription = null,
                             modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (uiState.isSignedIn) 
+                                MaterialTheme.colorScheme.primary 
+                            else 
+                                MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         
                         Spacer(modifier = Modifier.height(12.dp))
                         
-                        Text(
-                            text = "You're not signed in",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        
-                        Text(
-                            text = "Sign in now to upload, save, and comment on videos",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        Button(
-                            onClick = onSignInClick,
-                            shape = RoundedCornerShape(24.dp)
-                        ) {
-                            Text("Sign in")
+                        if (uiState.isSignedIn) {
+                            Text(
+                                text = uiState.userName ?: "Signed In",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            
+                            Text(
+                                text = "You're signed in to YouTube",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            OutlinedButton(
+                                onClick = { viewModel.signOut() },
+                                shape = RoundedCornerShape(24.dp)
+                            ) {
+                                Text("Sign out")
+                            }
+                        } else {
+                            Text(
+                                text = "You're not signed in",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            
+                            Text(
+                                text = "Sign in now to upload, save, and comment on videos",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            Button(
+                                onClick = onSignInClick,
+                                shape = RoundedCornerShape(24.dp)
+                            ) {
+                                Text("Sign in")
+                            }
                         }
                     }
                 }

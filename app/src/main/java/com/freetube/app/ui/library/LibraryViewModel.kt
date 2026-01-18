@@ -2,6 +2,7 @@ package com.freetube.app.ui.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.freetube.app.data.auth.AuthManager
 import com.freetube.app.data.local.DownloadDao
 import com.freetube.app.data.local.WatchHistoryDao
 import com.freetube.app.data.local.WatchLaterDao
@@ -17,14 +18,17 @@ data class LibraryUiState(
     val recentHistory: List<WatchHistoryItem> = emptyList(),
     val watchLaterCount: Int = 0,
     val downloadsCount: Int = 0,
-    val historyCount: Int = 0
+    val historyCount: Int = 0,
+    val isSignedIn: Boolean = false,
+    val userName: String? = null
 )
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val watchHistoryDao: WatchHistoryDao,
     private val watchLaterDao: WatchLaterDao,
-    private val downloadDao: DownloadDao
+    private val downloadDao: DownloadDao,
+    private val authManager: AuthManager
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -35,6 +39,19 @@ class LibraryViewModel @Inject constructor(
     }
     
     private fun loadData() {
+        // Check auth state
+        viewModelScope.launch {
+            authManager.isSignedIn.collect { isSignedIn ->
+                _uiState.value = _uiState.value.copy(isSignedIn = isSignedIn)
+            }
+        }
+        
+        viewModelScope.launch {
+            authManager.userName.collect { name ->
+                _uiState.value = _uiState.value.copy(userName = name)
+            }
+        }
+        
         viewModelScope.launch {
             // Recent history
             watchHistoryDao.getRecentHistory(5).collect { history ->
@@ -59,6 +76,12 @@ class LibraryViewModel @Inject constructor(
                     downloadsCount = downloads.size
                 )
             }
+        }
+    }
+    
+    fun signOut() {
+        viewModelScope.launch {
+            authManager.signOut()
         }
     }
 }

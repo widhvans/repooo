@@ -3,11 +3,14 @@ package com.freetube.app.navigation
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.freetube.app.data.auth.AuthManager
 import com.freetube.app.ui.auth.SignInScreen
 import com.freetube.app.ui.auth.ProfileScreen
 import com.freetube.app.ui.channel.ChannelScreen
@@ -22,6 +25,7 @@ import com.freetube.app.ui.settings.DebugLogsScreen
 import com.freetube.app.ui.settings.SettingsScreen
 import com.freetube.app.ui.shorts.ShortsScreen
 import com.freetube.app.ui.subscriptions.SubscriptionsScreen
+import kotlinx.coroutines.launch
 
 @Composable
 fun NavGraph(

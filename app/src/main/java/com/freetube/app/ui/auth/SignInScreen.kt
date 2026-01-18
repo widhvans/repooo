@@ -25,7 +25,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 @Composable
 fun SignInScreen(
     onBackClick: () -> Unit,
-    onSignInSuccess: (cookies: String) -> Unit
+    onSignInSuccess: (cookies: String) -> Unit,
+    viewModel: SignInViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
     var isLoading by remember { mutableStateOf(true) }
     var webView by remember { mutableStateOf<WebView?>(null) }
@@ -61,7 +62,10 @@ fun SignInScreen(
             YouTubeWebView(
                 onWebViewCreated = { webView = it },
                 onLoadingChanged = { isLoading = it },
-                onSignInSuccess = onSignInSuccess
+                onSignInSuccess = { cookies ->
+                    viewModel.saveAuth(cookies)
+                    onSignInSuccess(cookies)
+                }
             )
             
             if (isLoading) {
