@@ -3,11 +3,8 @@ package com.freetube.app.data.extractor
 import com.freetube.app.data.models.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.schabi.newpipe.extractor.InfoItem
-import org.schabi.newpipe.extractor.ListExtractor
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.channel.ChannelInfoItem
-import org.schabi.newpipe.extractor.kiosk.KioskList
 import org.schabi.newpipe.extractor.playlist.PlaylistInfoItem
 import org.schabi.newpipe.extractor.search.SearchInfo
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
@@ -48,18 +45,18 @@ class YouTubeService @Inject constructor() {
     /**
      * Get more trending videos with pagination
      */
-    suspend fun getMoreTrendingVideos(pageUrl: String): Result<Pair<List<VideoInfo>, String?>> = withContext(Dispatchers.IO) {
+    suspend fun getMoreTrendingVideos(nextPage: org.schabi.newpipe.extractor.Page?): Result<Pair<List<VideoInfo>, org.schabi.newpipe.extractor.Page?>> = withContext(Dispatchers.IO) {
         try {
+            if (nextPage == null) return@withContext Result.failure(Exception("No more pages"))
+            
             val kiosk = service.kioskList.getDefaultKioskExtractor(null)
-            val page = kiosk.getPage(ListExtractor.InfoItemsPage.fromUrl(pageUrl))
+            val page = kiosk.getPage(nextPage)
             
             val videos = page.items
                 .filterIsInstance<StreamInfoItem>()
                 .map { it.toVideoInfo() }
             
-            val nextPage = page.nextPage?.url
-            
-            Result.success(Pair(videos, nextPage))
+            Result.success(Pair(videos, page.nextPage))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -109,7 +106,7 @@ class YouTubeService @Inject constructor() {
                     format = stream.format?.name ?: "Unknown",
                     resolution = stream.resolution ?: "Unknown",
                     quality = stream.resolution ?: "Unknown",
-                    bitrate = stream.averageBitrate,
+                    bitrate = stream.bitrate,
                     isVideoOnly = false
                 )
             }
@@ -120,7 +117,7 @@ class YouTubeService @Inject constructor() {
                     format = stream.format?.name ?: "Unknown",
                     resolution = stream.resolution ?: "Unknown",
                     quality = stream.resolution ?: "Unknown",
-                    bitrate = stream.averageBitrate,
+                    bitrate = stream.bitrate,
                     isVideoOnly = true
                 )
             }
@@ -129,8 +126,8 @@ class YouTubeService @Inject constructor() {
                 AudioStream(
                     url = stream.content,
                     format = stream.format?.name ?: "Unknown",
-                    bitrate = stream.averageBitrate,
-                    quality = "${stream.averageBitrate / 1000}kbps"
+                    bitrate = stream.bitrate,
+                    quality = "${stream.bitrate / 1000}kbps"
                 )
             }
             
@@ -155,7 +152,7 @@ class YouTubeService @Inject constructor() {
         try {
             val searchInfo = SearchInfo.getInfo(service, service.searchQHFactory.fromQuery(query))
             
-            val results = searchInfo.relatedItems.mapNotNull { item ->
+            val results = searchInfo.getRelatedItems().mapNotNull { item ->
                 when (item) {
                     is StreamInfoItem -> SearchResult.Video(item.toVideoInfo())
                     is ChannelInfoItem -> SearchResult.Channel(item.toChannelInfo())
@@ -167,7 +164,7 @@ class YouTubeService @Inject constructor() {
             val page = SearchResultPage(
                 results = results,
                 nextPageToken = searchInfo.nextPage?.url,
-                estimatedResultCount = searchInfo.relatedItems.size.toLong()
+                estimatedResultCount = results.size.toLong()
             )
             
             Result.success(page)
@@ -220,7 +217,7 @@ class YouTubeService @Inject constructor() {
         try {
             val channelInfo = ExtractorChannelInfo.getInfo(service, channelUrl)
             
-            val videos = channelInfo.relatedItems
+            val videos = channelInfo.getRelatedItems()
                 .filterIsInstance<StreamInfoItem>()
                 .map { it.toVideoInfo() }
             
@@ -237,7 +234,7 @@ class YouTubeService @Inject constructor() {
         try {
             val commentsInfo = CommentsInfo.getInfo(service, videoUrl)
             
-            val comments = commentsInfo.relatedItems.map { comment ->
+            val comments = commentsInfo.getRelatedItems().map { comment ->
                 CommentInfo(
                     id = comment.commentId ?: "",
                     text = comment.commentText?.content ?: "",
@@ -271,7 +268,7 @@ class YouTubeService @Inject constructor() {
         try {
             val playlistInfo = ExtractorPlaylistInfo.getInfo(service, playlistUrl)
             
-            val videos = playlistInfo.relatedItems
+            val videos = playlistInfo.getRelatedItems()
                 .filterIsInstance<StreamInfoItem>()
                 .map { it.toVideoInfo() }
             
@@ -299,7 +296,7 @@ class YouTubeService @Inject constructor() {
         try {
             val streamInfo = StreamInfo.getInfo(service, videoUrl)
             
-            val videos = streamInfo.relatedItems
+            val videos = streamInfo.getRelatedItems()
                 .filterIsInstance<StreamInfoItem>()
                 .map { it.toVideoInfo() }
             
@@ -346,7 +343,7 @@ class YouTubeService @Inject constructor() {
         return PlaylistInfo(
             id = url.substringAfterLast("list=").substringBefore("&"),
             title = name,
-            description = description ?: "",
+            description = description?.toString() ?: "",
             thumbnailUrl = thumbnails.lastOrNull()?.url ?: "",
             channelId = uploaderUrl?.substringAfterLast("/") ?: "",
             channelName = uploaderName ?: "",
