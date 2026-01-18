@@ -1,6 +1,9 @@
 package com.freetube.app.ui.player
 
+import android.app.Activity
 import android.content.Intent
+import android.content.pm.ActivityInfo
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -37,7 +40,25 @@ fun PlayerScreen(
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+    val activity = context as? Activity
     val uiState by viewModel.uiState.collectAsState()
+    var isFullscreen by remember { mutableStateOf(false) }
+    
+    // Handle back press in fullscreen
+    BackHandler(enabled = isFullscreen) {
+        isFullscreen = false
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+    }
+    
+    // Fullscreen toggle function
+    fun toggleFullscreen() {
+        isFullscreen = !isFullscreen
+        activity?.requestedOrientation = if (isFullscreen) {
+            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
     
     // Share video function
     fun shareVideo(title: String) {
@@ -94,7 +115,8 @@ fun PlayerScreen(
                         streamUrl = streamUrl,
                         playbackSpeed = uiState.playbackSpeed,
                         isLive = uiState.video?.isLive ?: false,
-                        onBackClick = onBackClick,
+                        onBackClick = if (isFullscreen) { { toggleFullscreen() } } else onBackClick,
+                        onFullscreenClick = { toggleFullscreen() },
                         onQualityClick = { viewModel.showQualityDialog() },
                         onSpeedClick = { viewModel.showSpeedDialog() },
                         onCaptionsClick = { /* TODO: Captions */ },

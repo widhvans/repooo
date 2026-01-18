@@ -371,40 +371,36 @@ private fun PlayerControlsOverlay(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (isLive) {
-                    // Live indicator text
-                    Text(
-                        text = "Live",
-                        color = Color.Red,
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                } else {
-                    Text(
-                        text = formatDuration(currentPosition),
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelSmall
-                    )
+                // Time display on left
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isLive) {
+                        Text(
+                            text = "Live",
+                            color = Color.Red,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    } else {
+                        Text(
+                            text = "${formatDuration(currentPosition)} / ${formatDuration(duration)}",
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
                 }
                 
+                // Fullscreen button on right
                 IconButton(
                     onClick = onFullscreenClick,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Fullscreen,
                         contentDescription = "Fullscreen",
-                        tint = Color.White
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
                     )
-                }
-                
-                if (!isLive) {
-                    Text(
-                        text = formatDuration(duration),
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                } else {
-                    Spacer(modifier = Modifier.width(40.dp))
                 }
             }
         }
