@@ -87,16 +87,20 @@ fun PlayerScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                VideoPlayer(
-                    streamUrl = viewModel.getBestStreamUrl(),
-                    playbackSpeed = uiState.playbackSpeed,
-                    isLive = uiState.video?.isLive ?: false,
-                    onBackClick = onBackClick,
-                    onQualityClick = { viewModel.showQualityDialog() },
-                    onSpeedClick = { viewModel.showSpeedDialog() },
-                    onCaptionsClick = { /* TODO: Captions */ },
-                    onPositionChanged = { viewModel.updateWatchPosition(it) }
-                )
+                // Key on selectedQuality to force player reload when quality changes
+                val streamUrl = viewModel.getBestStreamUrl()
+                key(uiState.selectedQuality, streamUrl) {
+                    VideoPlayer(
+                        streamUrl = streamUrl,
+                        playbackSpeed = uiState.playbackSpeed,
+                        isLive = uiState.video?.isLive ?: false,
+                        onBackClick = onBackClick,
+                        onQualityClick = { viewModel.showQualityDialog() },
+                        onSpeedClick = { viewModel.showSpeedDialog() },
+                        onCaptionsClick = { /* TODO: Captions */ },
+                        onPositionChanged = { viewModel.updateWatchPosition(it) }
+                    )
+                }
             }
         }
         

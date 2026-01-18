@@ -44,15 +44,20 @@ class PlayerViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
     
-    val availableQualities = listOf(
-        "Auto",
-        "1080p",
-        "720p",
-        "480p",
-        "360p",
-        "240p",
-        "144p"
-    )
+    // Dynamic qualities from stream data
+    val availableQualities: List<String>
+        get() {
+            val streamData = _uiState.value.streamData ?: return listOf("Auto")
+            val qualities = mutableListOf("Auto")
+            streamData.videoStreams
+                .map { it.resolution }
+                .distinct()
+                .sortedByDescending { 
+                    it.replace("p", "").toIntOrNull() ?: 0 
+                }
+                .forEach { qualities.add(it) }
+            return qualities.ifEmpty { listOf("Auto") }
+        }
     
     val playbackSpeeds = listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f)
     
@@ -216,30 +221,52 @@ class PlayerViewModel @Inject constructor(
     
     /**
      * Get the best stream URL for playback
+     * Returns different URL based on selected quality
      */
     fun getBestStreamUrl(): String? {
         val streamData = _uiState.value.streamData ?: return null
+        val selectedQuality = _uiState.value.selectedQuality
         
-        // Prefer HLS for adaptive streaming
+        // Log for debugging
+        android.util.Log.d("PlayerViewModel", "Getting stream for quality: $selectedQuality")
+        android.util.Log.d("PlayerViewModel", "Available streams: ${streamData.videoStreams.size}")
+        
+        // If Auto selected or no progressive streams, use HLS
+        if (selectedQuality == "Auto") {
+            if (!streamData.hlsUrl.isNullOrEmpty()) {
+                android.util.Log.d("PlayerViewModel", "Using HLS URL")
+                return streamData.hlsUrl
+            }
+        }
+        
+        // Try to match selected quality in progressive streams
+        if (streamData.videoStreams.isNotEmpty()) {
+            val matchingStream = streamData.videoStreams.find { stream ->
+                stream.resolution.contains(selectedQuality.replace("p", ""), ignoreCase = true) ||
+                stream.quality.contains(selectedQuality, ignoreCase = true)
+            }
+            if (matchingStream != null) {
+                android.util.Log.d("PlayerViewModel", "Using progressive stream: ${matchingStream.resolution}")
+                return matchingStream.url
+            }
+            
+            // Fall back to best available progressive
+            val bestStream = streamData.videoStreams
+                .sortedByDescending { it.bitrate }
+                .firstOrNull()
+            if (bestStream != null) {
+                android.util.Log.d("PlayerViewModel", "Using best progressive: ${bestStream.resolution}")
+                return bestStream.url
+            }
+        }
+        
+        // Last resort: HLS
         if (!streamData.hlsUrl.isNullOrEmpty()) {
+            android.util.Log.d("PlayerViewModel", "Fallback to HLS")
             return streamData.hlsUrl
         }
         
-        // Fall back to progressive video streams
-        val selectedQuality = _uiState.value.selectedQuality
-        
-        // Try to match selected quality
-        val matchingStream = streamData.videoStreams.find { 
-            it.quality.contains(selectedQuality, ignoreCase = true) 
-        }
-        if (matchingStream != null) {
-            return matchingStream.url
-        }
-        
-        // Fall back to best available
-        return streamData.videoStreams
-            .sortedByDescending { it.bitrate }
-            .firstOrNull()?.url
+        return null
     }
     
     /**
