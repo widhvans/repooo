@@ -31,7 +31,7 @@ import kotlinx.coroutines.delay
 /**
  * ExoPlayer video player composable with custom controls
  */
-@OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
+@OptIn(UnstableApi::class)
 @Composable
 fun VideoPlayer(
     streamUrl: String?,
@@ -193,7 +193,7 @@ fun VideoPlayer(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+
 @Composable
 private fun PlayerControlsOverlay(
     isPlaying: Boolean,
@@ -361,16 +361,7 @@ private fun PlayerControlsOverlay(
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(12.dp), // Very thin seekbar like YouTube
-                    thumb = {
-                        // Small circular thumb
-                        Box(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .background(Color.Red)
-                        )
-                    }
+                        .height(16.dp) // Thin seekbar
                 )
             }
             
