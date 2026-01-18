@@ -1,5 +1,6 @@
 package com.freetube.app.ui.player
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -34,7 +36,18 @@ fun PlayerScreen(
     onVideoClick: (String) -> Unit,
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    
+    // Share video function
+    fun shareVideo(title: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, title)
+            putExtra(Intent.EXTRA_TEXT, "Check out: $title\nhttps://www.youtube.com/watch?v=$videoId")
+        }
+        context.startActivity(Intent.createChooser(shareIntent, "Share video"))
+    }
     
     // Quality selection dialog
     if (uiState.showQualityDialog) {
@@ -77,8 +90,11 @@ fun PlayerScreen(
                 VideoPlayer(
                     streamUrl = viewModel.getBestStreamUrl(),
                     playbackSpeed = uiState.playbackSpeed,
+                    isLive = uiState.video?.isLive ?: false,
                     onBackClick = onBackClick,
                     onQualityClick = { viewModel.showQualityDialog() },
+                    onSpeedClick = { viewModel.showSpeedDialog() },
+                    onCaptionsClick = { /* TODO: Captions */ },
                     onPositionChanged = { viewModel.updateWatchPosition(it) }
                 )
             }
@@ -94,7 +110,7 @@ fun PlayerScreen(
                     onToggleDescription = { viewModel.toggleDescriptionExpanded() },
                     onChannelClick = { onChannelClick(video.channelId) },
                     onWatchLaterClick = { viewModel.toggleWatchLater() },
-                    onShareClick = { /* TODO: Implement share */ },
+                    onShareClick = { shareVideo(video.title) },
                     onDownloadClick = { /* TODO: Implement download */ },
                     onSpeedClick = { viewModel.showSpeedDialog() }
                 )

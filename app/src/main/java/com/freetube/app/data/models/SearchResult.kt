@@ -4,7 +4,9 @@ package com.freetube.app.data.models
  * Sealed class representing different types of search results
  */
 sealed class SearchResult {
-    data class Video(val video: VideoInfo) : SearchResult()
+    data class Video(val video: VideoInfo) : SearchResult() {
+        fun toVideoInfo() = video
+    }
     data class Channel(val channel: ChannelInfo) : SearchResult()
     data class Playlist(val playlist: PlaylistInfo) : SearchResult()
 }

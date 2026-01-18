@@ -37,10 +37,13 @@ fun VideoPlayer(
     streamUrl: String?,
     modifier: Modifier = Modifier,
     playbackSpeed: Float = 1f,
+    isLive: Boolean = false,
     onBackClick: () -> Unit = {},
     onPipClick: () -> Unit = {},
     onFullscreenClick: () -> Unit = {},
     onQualityClick: () -> Unit = {},
+    onSpeedClick: () -> Unit = {},
+    onCaptionsClick: () -> Unit = {},
     onPositionChanged: (Long) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -51,6 +54,7 @@ fun VideoPlayer(
     var duration by remember { mutableLongStateOf(0L) }
     var bufferedPosition by remember { mutableLongStateOf(0L) }
     var isBuffering by remember { mutableStateOf(false) }
+    var isLiveStream by remember { mutableStateOf(isLive) }
     
     // Auto-hide controls after 3 seconds
     LaunchedEffect(showControls, isPlaying) {
@@ -88,6 +92,8 @@ fun VideoPlayer(
                 isBuffering = playbackState == Player.STATE_BUFFERING
                 if (playbackState == Player.STATE_READY) {
                     duration = exoPlayer.duration
+                    // Detect live stream (duration is very long or C.TIME_UNSET)
+                    isLiveStream = isLive || exoPlayer.isCurrentMediaItemLive || duration <= 0 || duration > 86400000 // > 24 hours
                 }
             }
             
@@ -157,22 +163,31 @@ fun VideoPlayer(
                 currentPosition = currentPosition,
                 duration = duration,
                 bufferedPosition = bufferedPosition,
+                isLive = isLiveStream,
                 onPlayPauseClick = {
                     if (isPlaying) exoPlayer.pause() else exoPlayer.play()
                 },
                 onSeekBack = {
-                    exoPlayer.seekTo((currentPosition - 10000).coerceAtLeast(0))
+                    if (!isLiveStream) {
+                        exoPlayer.seekTo((currentPosition - 10000).coerceAtLeast(0))
+                    }
                 },
                 onSeekForward = {
-                    exoPlayer.seekTo((currentPosition + 10000).coerceAtMost(duration))
+                    if (!isLiveStream) {
+                        exoPlayer.seekTo((currentPosition + 10000).coerceAtMost(duration))
+                    }
                 },
                 onSeekTo = { position ->
-                    exoPlayer.seekTo(position)
+                    if (!isLiveStream) {
+                        exoPlayer.seekTo(position)
+                    }
                 },
                 onBackClick = onBackClick,
                 onPipClick = onPipClick,
                 onFullscreenClick = onFullscreenClick,
-                onQualityClick = onQualityClick
+                onQualityClick = onQualityClick,
+                onSpeedClick = onSpeedClick,
+                onCaptionsClick = onCaptionsClick
             )
         }
     }
@@ -184,6 +199,7 @@ private fun PlayerControlsOverlay(
     currentPosition: Long,
     duration: Long,
     bufferedPosition: Long,
+    isLive: Boolean,
     onPlayPauseClick: () -> Unit,
     onSeekBack: () -> Unit,
     onSeekForward: () -> Unit,
@@ -191,7 +207,9 @@ private fun PlayerControlsOverlay(
     onBackClick: () -> Unit,
     onPipClick: () -> Unit,
     onFullscreenClick: () -> Unit,
-    onQualityClick: () -> Unit
+    onQualityClick: () -> Unit,
+    onSpeedClick: () -> Unit,
+    onCaptionsClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -215,6 +233,23 @@ private fun PlayerControlsOverlay(
             }
             
             Row {
+                // Captions button
+                IconButton(onClick = onCaptionsClick) {
+                    Icon(
+                        imageVector = Icons.Default.ClosedCaption,
+                        contentDescription = "Captions",
+                        tint = Color.White
+                    )
+                }
+                // Speed button
+                IconButton(onClick = onSpeedClick) {
+                    Icon(
+                        imageVector = Icons.Default.Speed,
+                        contentDescription = "Speed",
+                        tint = Color.White
+                    )
+                }
+                // Quality button
                 IconButton(onClick = onQualityClick) {
                     Icon(
                         imageVector = Icons.Default.Settings,
@@ -222,6 +257,7 @@ private fun PlayerControlsOverlay(
                         tint = Color.White
                     )
                 }
+                // PiP button
                 IconButton(onClick = onPipClick) {
                     Icon(
                         imageVector = Icons.Default.PictureInPicture,
@@ -232,23 +268,43 @@ private fun PlayerControlsOverlay(
             }
         }
         
+        // Live indicator
+        if (isLive) {
+            Surface(
+                color = Color.Red,
+                shape = RoundedCornerShape(4.dp),
+                modifier = Modifier
+                    .padding(start = 56.dp, top = 12.dp)
+                    .align(Alignment.TopStart)
+            ) {
+                Text(
+                    text = "● LIVE",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+        
         // Center controls
         Row(
             modifier = Modifier.align(Alignment.Center),
             horizontalArrangement = Arrangement.spacedBy(32.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Seek back
-            IconButton(
-                onClick = onSeekBack,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Replay10,
-                    contentDescription = "Seek back 10s",
-                    tint = Color.White,
-                    modifier = Modifier.size(36.dp)
-                )
+            // Seek back (hidden for live)
+            if (!isLive) {
+                IconButton(
+                    onClick = onSeekBack,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Replay10,
+                        contentDescription = "Seek back 10s",
+                        tint = Color.White,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
             }
             
             // Play/Pause
@@ -267,76 +323,95 @@ private fun PlayerControlsOverlay(
                 )
             }
             
-            // Seek forward
-            IconButton(
-                onClick = onSeekForward,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Forward10,
-                    contentDescription = "Seek forward 10s",
-                    tint = Color.White,
-                    modifier = Modifier.size(36.dp)
-                )
+            // Seek forward (hidden for live)
+            if (!isLive) {
+                IconButton(
+                    onClick = onSeekForward,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Forward10,
+                        contentDescription = "Seek forward 10s",
+                        tint = Color.White,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
             }
         }
         
-        // Bottom bar with seek bar
+        // Bottom bar with seek bar (only for non-live)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomStart)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            // Seek bar
-            Slider(
-                value = if (duration > 0) currentPosition.toFloat() / duration else 0f,
-                onValueChange = { fraction ->
-                    onSeekTo((fraction * duration).toLong())
-                },
-                colors = SliderDefaults.colors(
-                    thumbColor = Color.Red,
-                    activeTrackColor = Color.Red,
-                    inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
+            // Seek bar - only show for non-live
+            if (!isLive && duration > 0) {
+                Slider(
+                    value = if (duration > 0) currentPosition.toFloat() / duration else 0f,
+                    onValueChange = { fraction ->
+                        onSeekTo((fraction * duration).toLong())
+                    },
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color.Red,
+                        activeTrackColor = Color.Red,
+                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(24.dp) // Thinner seekbar
+                )
+            }
             
-            // Time display
+            // Time display and controls
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = formatDuration(currentPosition),
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelSmall
-                )
-                
-                Row {
-                    IconButton(
-                        onClick = onFullscreenClick,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Fullscreen,
-                            contentDescription = "Fullscreen",
-                            tint = Color.White
-                        )
-                    }
+                if (isLive) {
+                    // Live indicator text
+                    Text(
+                        text = "Live",
+                        color = Color.Red,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                } else {
+                    Text(
+                        text = formatDuration(currentPosition),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall
+                    )
                 }
                 
-                Text(
-                    text = formatDuration(duration),
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelSmall
-                )
+                IconButton(
+                    onClick = onFullscreenClick,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Fullscreen,
+                        contentDescription = "Fullscreen",
+                        tint = Color.White
+                    )
+                }
+                
+                if (!isLive) {
+                    Text(
+                        text = formatDuration(duration),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                } else {
+                    Spacer(modifier = Modifier.width(40.dp))
+                }
             }
         }
     }
 }
 
 private fun formatDuration(ms: Long): String {
+    if (ms <= 0) return "0:00"
     val seconds = (ms / 1000) % 60
     val minutes = (ms / (1000 * 60)) % 60
     val hours = ms / (1000 * 60 * 60)

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freetube.app.data.extractor.YouTubeService
 import com.freetube.app.data.models.VideoInfo
+import com.freetube.app.data.models.SearchFilters
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,40 +28,73 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
     
-    val categories = listOf(
-        "Trending",
-        "Music",
-        "Gaming",
-        "News",
-        "Sports",
-        "Entertainment",
-        "Education",
-        "Comedy"
+    // Category to search query mapping
+    private val categoryQueries = mapOf(
+        "Trending" to "",
+        "Music" to "music songs",
+        "Gaming" to "gaming gameplay",
+        "News" to "news today",
+        "Sports" to "sports highlights",
+        "Entertainment" to "entertainment",
+        "Education" to "educational",
+        "Comedy" to "comedy funny"
     )
     
+    val categories = categoryQueries.keys.toList()
+    
     init {
-        loadTrendingVideos()
+        loadVideosForCategory("Trending")
     }
     
     fun loadTrendingVideos() {
+        loadVideosForCategory(_uiState.value.selectedCategory)
+    }
+    
+    private fun loadVideosForCategory(category: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             
-            youtubeService.getTrendingVideos().fold(
-                onSuccess = { videos ->
-                    _uiState.value = _uiState.value.copy(
-                        videos = videos,
-                        isLoading = false,
-                        error = null
-                    )
-                },
-                onFailure = { e ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = e.message ?: "Failed to load videos"
-                    )
-                }
-            )
+            val query = categoryQueries[category] ?: ""
+            
+            if (category == "Trending" || query.isEmpty()) {
+                // Use trending API for main tab
+                youtubeService.getTrendingVideos().fold(
+                    onSuccess = { videos ->
+                        _uiState.value = _uiState.value.copy(
+                            videos = videos,
+                            isLoading = false,
+                            error = null
+                        )
+                    },
+                    onFailure = { e ->
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = e.message ?: "Failed to load videos"
+                        )
+                    }
+                )
+            } else {
+                // Use search for category tabs
+                youtubeService.search(query, SearchFilters()).fold(
+                    onSuccess = { resultPage ->
+                        val videos = resultPage.results
+                            .filterIsInstance<com.freetube.app.data.models.SearchResult.Video>()
+                            .map { it.toVideoInfo() }
+                        
+                        _uiState.value = _uiState.value.copy(
+                            videos = videos,
+                            isLoading = false,
+                            error = null
+                        )
+                    },
+                    onFailure = { e ->
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = e.message ?: "Failed to load $category videos"
+                        )
+                    }
+                )
+            }
         }
     }
     
@@ -68,29 +102,54 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isRefreshing = true)
             
-            youtubeService.getTrendingVideos().fold(
-                onSuccess = { videos ->
-                    _uiState.value = _uiState.value.copy(
-                        videos = videos,
-                        isRefreshing = false,
-                        error = null
-                    )
-                },
-                onFailure = { e ->
-                    _uiState.value = _uiState.value.copy(
-                        isRefreshing = false,
-                        error = e.message ?: "Failed to refresh"
-                    )
-                }
-            )
+            val category = _uiState.value.selectedCategory
+            val query = categoryQueries[category] ?: ""
+            
+            if (category == "Trending" || query.isEmpty()) {
+                youtubeService.getTrendingVideos().fold(
+                    onSuccess = { videos ->
+                        _uiState.value = _uiState.value.copy(
+                            videos = videos,
+                            isRefreshing = false,
+                            error = null
+                        )
+                    },
+                    onFailure = { e ->
+                        _uiState.value = _uiState.value.copy(
+                            isRefreshing = false,
+                            error = e.message ?: "Failed to refresh"
+                        )
+                    }
+                )
+            } else {
+                youtubeService.search(query, SearchFilters()).fold(
+                    onSuccess = { resultPage ->
+                        val videos = resultPage.results
+                            .filterIsInstance<com.freetube.app.data.models.SearchResult.Video>()
+                            .map { it.toVideoInfo() }
+                        
+                        _uiState.value = _uiState.value.copy(
+                            videos = videos,
+                            isRefreshing = false,
+                            error = null
+                        )
+                    },
+                    onFailure = { e ->
+                        _uiState.value = _uiState.value.copy(
+                            isRefreshing = false,
+                            error = e.message ?: "Failed to refresh"
+                        )
+                    }
+                )
+            }
         }
     }
     
     fun selectCategory(category: String) {
-        _uiState.value = _uiState.value.copy(selectedCategory = category)
-        // For now, just reload trending - in a full implementation,
-        // you'd filter by category using YouTube's category API
-        loadTrendingVideos()
+        if (category != _uiState.value.selectedCategory) {
+            _uiState.value = _uiState.value.copy(selectedCategory = category)
+            loadVideosForCategory(category)
+        }
     }
     
     fun clearError() {
