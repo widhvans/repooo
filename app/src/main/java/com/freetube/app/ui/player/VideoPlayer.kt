@@ -31,7 +31,7 @@ import kotlinx.coroutines.delay
 /**
  * ExoPlayer video player composable with custom controls
  */
-@OptIn(UnstableApi::class)
+@OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun VideoPlayer(
     streamUrl: String?,
