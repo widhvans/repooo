@@ -217,10 +217,24 @@ class YouTubeService @Inject constructor() {
         try {
             val channelInfo = ExtractorChannelInfo.getInfo(service, channelUrl)
             
-            val videos = channelInfo.getRelatedItems()
-                .filterIsInstance<StreamInfoItem>()
-                .map { it.toVideoInfo() }
+            // Try to get videos from the first tab (usually Videos tab)
+            val videos = mutableListOf<VideoInfo>()
             
+            for (tab in channelInfo.tabs) {
+                if (tab.contentFilters.any { it.contains("video", ignoreCase = true) }) {
+                    val tabExtractor = service.getChannelTabExtractor(tab)
+                    tabExtractor.fetchPage()
+                    
+                    val tabVideos = tabExtractor.initialPage.items
+                        .filterIsInstance<StreamInfoItem>()
+                        .map { it.toVideoInfo() }
+                    
+                    videos.addAll(tabVideos)
+                    break
+                }
+            }
+            
+            // If no videos from tabs, return empty list
             Result.success(videos)
         } catch (e: Exception) {
             Result.failure(e)
