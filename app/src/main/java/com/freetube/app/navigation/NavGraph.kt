@@ -8,6 +8,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.freetube.app.ui.auth.SignInScreen
+import com.freetube.app.ui.auth.ProfileScreen
 import com.freetube.app.ui.channel.ChannelScreen
 import com.freetube.app.ui.home.HomeScreen
 import com.freetube.app.ui.library.LibraryScreen
@@ -107,6 +109,9 @@ fun NavGraph(
                 },
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onSignInClick = {
+                    navController.navigate("signin")
                 }
             )
         }
@@ -216,6 +221,19 @@ fun NavGraph(
         composable(Screen.DebugLogs.route) {
             DebugLogsScreen(
                 onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        
+        // Sign In
+        composable("signin") {
+            SignInScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onSignInSuccess = { cookies ->
+                    // Navigate back after successful login
                     navController.popBackStack()
                 }
             )
