@@ -193,6 +193,7 @@ fun VideoPlayer(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PlayerControlsOverlay(
     isPlaying: Boolean,
